@@ -1,27 +1,15 @@
-﻿using HotelReservations.MVVM.Stores;
-using MVVM.Models;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using HotelReservations.MVVM.Services;
+
 
 namespace MVVM.ViewModels
 {
     public class MainViewModel : ViewModelBase
     {
-        private readonly NavigationStore _navigationStore;
-        public ViewModelBase CurrentViewModel => _navigationStore.CurrentViewModel;
+        public INavigationService NavigationService { get; }
 
-        public MainViewModel(NavigationStore navigationStore)
+        public MainViewModel(INavigationService navigationService)
         {
-            _navigationStore = navigationStore;
-            _navigationStore.CurrentViewModelChanged += _navigationStore_CurrentViewModelChanged;
-        }
-
-        private void _navigationStore_CurrentViewModelChanged()
-        {
-            this.OnPropertyChanged(nameof(CurrentViewModel));
+            NavigationService = navigationService;
         }
     }
 }

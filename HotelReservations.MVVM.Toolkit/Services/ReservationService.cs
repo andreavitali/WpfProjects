@@ -27,7 +27,7 @@ namespace HotelReservations.MVVM.Services
         {
             using ReservationsDbContext reservationsDbContext = new ReservationsDbContext();
             IEnumerable<ReservationEntity> reservationDTOs = await reservationsDbContext.Reservations.ToListAsync();
-            await Task.Delay(2000);
+            await Task.Delay(1000);
             return reservationDTOs.Select(rDTO => rDTO.MapToReservation());
         }
 

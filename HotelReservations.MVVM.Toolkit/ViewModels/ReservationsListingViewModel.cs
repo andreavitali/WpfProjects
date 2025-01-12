@@ -12,6 +12,7 @@ namespace MVVM.ViewModels
     {
         private readonly ObservableCollection<ReservationViewModel> _reservations;
         private readonly HotelStore _hotelStore;
+        private readonly INavigationService _navigationService;
 
         private bool _isLoading;
         public bool IsLoading
@@ -50,12 +51,12 @@ namespace MVVM.ViewModels
         public IEnumerable<ReservationViewModel> Reservations => _reservations;
         public bool HasReservations => _reservations.Any();
 
-        public ReservationsListingViewModel(HotelStore hotelStore, NavigationService<MakeReservationViewModel> makeReservationNavigationService)
+        public ReservationsListingViewModel(HotelStore hotelStore, INavigationService navigationService)
         {
             this._reservations = new ObservableCollection<ReservationViewModel>();
             this._hotelStore = hotelStore;
-
-            MakeReservationCommand = new NavigateCommand<MakeReservationViewModel>(makeReservationNavigationService);
+            this._navigationService = navigationService;
+            MakeReservationCommand = new NavigateCommand<MakeReservationViewModel>(this._navigationService);
             LoadReservationsCommand = new LoadReservationsCommand(this, hotelStore);
             LoadReservationsCommand.Execute(null);
 

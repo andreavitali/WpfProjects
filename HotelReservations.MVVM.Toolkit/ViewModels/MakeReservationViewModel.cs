@@ -105,10 +105,10 @@ namespace MVVM.ViewModels
         public ICommand SubmitCommand { get; }
         public ICommand CancelCommand { get; }
 
-        public MakeReservationViewModel(HotelStore hotelStore, NavigationService<ReservationsListingViewModel> reservationListNavigationService)
+        public MakeReservationViewModel(HotelStore hotelStore, INavigationService navigationService)
         {
-            SubmitCommand = new MakeReservationCommand(this, hotelStore, reservationListNavigationService);
-            CancelCommand = new NavigateCommand<ReservationsListingViewModel>(reservationListNavigationService);
+            SubmitCommand = new MakeReservationCommand(this, hotelStore, navigationService);
+            CancelCommand = new NavigateCommand<ReservationsListingViewModel>(navigationService);
         }
 
         #region Errors

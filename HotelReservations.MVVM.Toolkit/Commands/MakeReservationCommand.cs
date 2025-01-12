@@ -11,13 +11,13 @@ namespace HotelReservations.MVVM.Commands
     {
         private readonly MakeReservationViewModel _makeReservationViewModel;
         private readonly HotelStore _hotelStore;
-        private readonly NavigationService<ReservationsListingViewModel> _reservationsListNavigationService;
+        private readonly INavigationService _navigationService;
 
-        public MakeReservationCommand(MakeReservationViewModel makeReservationViewModel, HotelStore hotelStore, NavigationService<ReservationsListingViewModel> navigationService)
+        public MakeReservationCommand(MakeReservationViewModel makeReservationViewModel, HotelStore hotelStore, INavigationService navigationService)
         {
             _makeReservationViewModel = makeReservationViewModel;
             _hotelStore = hotelStore;
-            _reservationsListNavigationService = navigationService;
+            _navigationService = navigationService;
             _makeReservationViewModel.PropertyChanged += OnViewModelPropertyChanged;
         }
 
@@ -52,7 +52,7 @@ namespace HotelReservations.MVVM.Commands
             {
                 await _hotelStore.MakeReservation(reservation);
                 MessageBox.Show("Reservation successful.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
-                _reservationsListNavigationService.Navigate();
+                _navigationService.NavigateTo<ReservationsListingViewModel>();
             }
             catch (ReservationConflictException)
             {

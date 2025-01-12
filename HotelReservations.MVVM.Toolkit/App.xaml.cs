@@ -5,10 +5,8 @@ using Microsoft.Extensions.Hosting;
 using MVVM.Models;
 using MVVM.ViewModels;
 using System.Windows;
-using HotelReservations.MVVM.Toolkit;
 using Microsoft.Extensions.DependencyInjection;
 using System.Windows.Navigation;
-using MVVM.Views;
 
 namespace MVVM
 {
@@ -27,17 +25,8 @@ namespace MVVM
                     // DB
                     services.AddDbContext<ReservationsDbContext>();
 
-                    // Services
-                    services.AddSingleton<IReservationService, ReservationService>();
-
-                    services.AddSingleton<NavigationService<MakeReservationViewModel>>();
-                    services.AddSingleton<Func<MakeReservationViewModel>>(services => () => services.GetRequiredService<MakeReservationViewModel>());
-                    services.AddSingleton<NavigationService<ReservationsListingViewModel>>();
-                    services.AddSingleton<Func<ReservationsListingViewModel>>(services => () => services.GetRequiredService<ReservationsListingViewModel>());
-
                     // Stores
                     services.AddSingleton<HotelStore>();
-                    services.AddSingleton<NavigationStore>();
 
                     // Models
                     services.AddTransient<ReservationBook>();
@@ -58,8 +47,18 @@ namespace MVVM
                     {
                         DataContext = services.GetRequiredService<MainViewModel>()
                     });
-                    services.AddTransient<MakeReservationView>();
-                    services.AddTransient<ReservationsListingView>();
+
+                    // Services
+                    services.AddSingleton<IReservationService, ReservationService>();
+
+                    services.AddSingleton<Func<Type, ViewModelBase>>(services => viewModelType => (ViewModelBase)services.GetRequiredService(viewModelType));
+                    services.AddSingleton<INavigationService, HotelReservations.MVVM.Services.NavigationService>();
+
+                    //services.AddSingleton<NavigationService<MakeReservationViewModel>>();
+                    //services.AddSingleton<Func<MakeReservationViewModel>>(services => () => services.GetRequiredService<MakeReservationViewModel>());
+                    //services.AddSingleton<NavigationService<ReservationsListingViewModel>>();
+                    //services.AddSingleton<Func<ReservationsListingViewModel>>(services => () => services.GetRequiredService<ReservationsListingViewModel>());
+
                 });
 
             _host = builder.Build();
@@ -72,8 +71,8 @@ namespace MVVM
             using ReservationsDbContext reservationsDbContext = _host.Services.GetRequiredService<ReservationsDbContext>();
             reservationsDbContext.Database.EnsureCreated();
 
-            var navigationService = _host.Services.GetRequiredService<NavigationService<ReservationsListingViewModel>>();
-            navigationService.Navigate();
+            var navigationService = _host.Services.GetRequiredService<INavigationService>();
+            navigationService.NavigateTo<ReservationsListingViewModel>();
 
             MainWindow = _host.Services.GetRequiredService<MainWindow>();
             MainWindow.Show();

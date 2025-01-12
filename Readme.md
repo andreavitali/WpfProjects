@@ -4,5 +4,6 @@ Some WPF sample projects.
 
 [HotelReservations.MVVM.Toolikt]() is a version of the previous WPF application refactored to use:
 - [x] Dependency Injection
+- [x] Simplified navigation
 - [ ] MVVM CommunityToolkit
 - [ ] Improved db <-> models <-> viewmodels structure

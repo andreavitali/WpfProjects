@@ -1,27 +1,33 @@
-﻿using HotelReservations.MVVM.Stores;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using MVVM.ViewModels;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace HotelReservations.MVVM.Services
 {
-    public class NavigationService<TViewModel> where TViewModel : ViewModelBase
+    public class NavigationService : ObservableObject, INavigationService
     {
-        private readonly NavigationStore _navigationStore;
-        private readonly Func<TViewModel> _navigationFunc;
+        private ViewModelBase _currentViewModel;
+        private readonly Func<Type, ViewModelBase> _viewModelResolver;
 
-        public NavigationService(NavigationStore navigationStore, Func<TViewModel> navigationFunc)
+        public ViewModelBase CurrentViewModel 
         {
-            _navigationStore = navigationStore;
-            _navigationFunc = navigationFunc;
+            get => _currentViewModel;
+            private set 
+            {
+                _currentViewModel?.Dispose();
+                _currentViewModel = value;
+                OnPropertyChanged();
+            }
         }
 
-        public void Navigate()
+        public NavigationService(Func<Type, ViewModelBase> viewModelResolver)
         {
-            _navigationStore.CurrentViewModel = _navigationFunc();
+            _viewModelResolver = viewModelResolver;
+        }
+
+        public void NavigateTo<TViewModel>() where TViewModel : ViewModelBase
+        {
+            var viewModel = _viewModelResolver(typeof(TViewModel));
+            CurrentViewModel = viewModel;
         }
     }
 }
