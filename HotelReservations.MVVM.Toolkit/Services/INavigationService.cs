@@ -9,7 +9,7 @@ namespace HotelReservations.MVVM.Services
 {
     public interface INavigationService
     {
-        ViewModelBase CurrentViewModel { get; }
-        void NavigateTo<TViewModel>() where TViewModel : ViewModelBase;
+        IPageViewModel CurrentViewModel { get; }
+        void NavigateTo<TViewModel>() where TViewModel : IPageViewModel;
     }
 }

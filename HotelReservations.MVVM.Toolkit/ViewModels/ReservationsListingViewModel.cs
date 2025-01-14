@@ -1,67 +1,73 @@
-﻿using HotelReservations.MVVM.Commands;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 using HotelReservations.MVVM.Services;
 using HotelReservations.MVVM.Stores;
+using HotelReservations.MVVM.Toolkit.Messages;
 using MVVM.Models;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
-using System.Windows.Input;
 
 namespace MVVM.ViewModels
 {
-    public class ReservationsListingViewModel : ViewModelBase
+    public partial class ReservationsListingViewModel : ObservableRecipient, IRecipient<ReservationMadeMessage>, IPageViewModel
     {
         private readonly ObservableCollection<ReservationViewModel> _reservations;
         private readonly HotelStore _hotelStore;
         private readonly INavigationService _navigationService;
 
+        [ObservableProperty]
         private bool _isLoading;
-        public bool IsLoading
-        {
-            get
-            {
-                return _isLoading;
-            }
-            set
-            {
-                _isLoading = value;
-                OnPropertyChanged(nameof(IsLoading));
-            }
-        }
 
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(HasError))]
         private string _errorMessage;
-        public string ErrorMessage
-        {
-            get
-            {
-                return _errorMessage;
-            }
-            set
-            {
-                _errorMessage = value;
-                OnPropertyChanged(nameof(ErrorMessage));
-                OnPropertyChanged(nameof(HasError));
-            }
-        }
 
-        public bool HasError => !String.IsNullOrEmpty(_errorMessage);
-
-        public ICommand MakeReservationCommand { get; }
-        public ICommand LoadReservationsCommand { get; }
+        public bool HasError => !String.IsNullOrEmpty(ErrorMessage);
 
         public IEnumerable<ReservationViewModel> Reservations => _reservations;
         public bool HasReservations => _reservations.Any();
+
+        [RelayCommand]
+        private async Task LoadReservations()
+        {
+            ErrorMessage = string.Empty;
+            IsLoading = true;
+
+            try
+            {
+                await _hotelStore.LoadAsync();
+                UpdateReservations(_hotelStore.Reservations);
+            }
+            catch (Exception)
+            {
+                ErrorMessage = "Failed to load reservations.";
+            }
+            finally
+            {
+                IsLoading = false;
+            }
+        }
+
+        [RelayCommand]
+        private void MakeReservation()
+        {
+            _navigationService.NavigateTo<MakeReservationViewModel>();
+        }
 
         public ReservationsListingViewModel(HotelStore hotelStore, INavigationService navigationService)
         {
             this._reservations = new ObservableCollection<ReservationViewModel>();
             this._hotelStore = hotelStore;
             this._navigationService = navigationService;
-            MakeReservationCommand = new NavigateCommand<MakeReservationViewModel>(this._navigationService);
-            LoadReservationsCommand = new LoadReservationsCommand(this, hotelStore);
             LoadReservationsCommand.Execute(null);
 
-            _hotelStore.ReservationMade += HotelStore_ReservationMade;
             _reservations.CollectionChanged += Reservations_CollectionChanged;
+        }
+
+        public void Receive(ReservationMadeMessage message)
+        {
+            _reservations.Add(new ReservationViewModel(message));
         }
 
         private void Reservations_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
@@ -69,31 +75,13 @@ namespace MVVM.ViewModels
             OnPropertyChanged(nameof(HasReservations));
         }
 
-        private void HotelStore_ReservationMade(Reservation obj)
-        {
-            _reservations.Add(new ReservationViewModel(obj));
-        }
-
-        //public static ReservationsListingViewModel LoadViewModel(HotelStore hotelStore, NavigationService<MakeReservationViewModel> makeReservationNavigationService)
-        //{
-        //    ReservationsListingViewModel viewModel = new ReservationsListingViewModel(hotelStore, makeReservationNavigationService);
-        //    viewModel.LoadReservationsCommand.Execute(null);
-        //    return viewModel;
-        //}
-
         public void UpdateReservations(IEnumerable<Reservation> reservations)
         {
             _reservations.Clear();
             foreach (var reservation in reservations)
             {
                 _reservations.Add(new ReservationViewModel(reservation));
-            } 
-        }
-
-        public override void Dispose()
-        {
-            _hotelStore.ReservationMade -= HotelStore_ReservationMade;
-            base.Dispose();
-        }
+            }
+        }        
     }
 }

@@ -1,152 +1,119 @@
-﻿using HotelReservations.MVVM.Commands;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 using HotelReservations.MVVM.Services;
 using HotelReservations.MVVM.Stores;
+using MVVM.Exceptions;
 using MVVM.Models;
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Input;
+using System.ComponentModel.DataAnnotations;
+using System.Windows;
 
 namespace MVVM.ViewModels
 {
-    public class MakeReservationViewModel : ViewModelBase, INotifyDataErrorInfo
+    [ObservableRecipient]
+    public partial class MakeReservationViewModel : ObservableValidator, IPageViewModel
     {
-		private string _username;
-		public string Username
-		{
-			get
-			{
-				return _username;
-			}
-			set
-			{
-				_username = value;
-				OnPropertyChanged(nameof(Username));
-			}
-		}
+        private readonly HotelStore _hotelStore;
+        private readonly INavigationService _navigationService;
 
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(CanCreateReservation))]
+        [NotifyCanExecuteChangedFor(nameof(SubmitCommand))]
+        [NotifyDataErrorInfo]
+        [Required(ErrorMessage = "Username is required.")]
+        private string _username;
+
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(CanCreateReservation))]
+        [NotifyCanExecuteChangedFor(nameof(SubmitCommand))]
+        [NotifyDataErrorInfo]
+        [Range(1, 20, ErrorMessage = "Floor number must be between 1 and 20")]
         private int _floorNumber;
-        public int FloorNumber
-        {
-            get
-            {
-                return _floorNumber;
-            }
-            set
-            {
-                _floorNumber = value;
-                OnPropertyChanged(nameof(FloorNumber));
-            }
-        }
 
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(CanCreateReservation))]
+        [NotifyCanExecuteChangedFor(nameof(SubmitCommand))]
+        [NotifyDataErrorInfo]
+        [Range(1, 999, ErrorMessage = "Room number must be between 1 and 999")]
         private int _roomNumber;
-        public int RoomNumber
-        {
-            get
-            {
-                return _roomNumber;
-            }
-            set
-            {
-                _roomNumber = value;
-                OnPropertyChanged(nameof(RoomNumber));
-            }
-        }
 
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(CanCreateReservation))]
+        [NotifyCanExecuteChangedFor(nameof(SubmitCommand))]
+        [NotifyDataErrorInfo]
+        [CustomValidation(typeof(MakeReservationViewModel), 
+            nameof(ValidateStartDateBeforEndDate), 
+            ErrorMessage = "Start date cannot be after end date.")]
         private DateTime _startDate = DateTime.Today;
-        public DateTime StartDate
+
+        partial void OnStartDateChanged(DateTime oldValue, DateTime newValue)
         {
-            get
-            {
-                return _startDate;
-            }
-            set
-            {
-                _startDate = value;
-                OnPropertyChanged(nameof(StartDate));
-
-                ClearErrors(nameof(StartDate));
-                ClearErrors(nameof(EndDate));
-
-                if (EndDate < StartDate)
-                {
-                    AddError(nameof(StartDate), "Start date cannot be after end date.");
-                }
-            }
+            ValidateProperty(EndDate, nameof(EndDate));
         }
 
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(CanCreateReservation))]
+        [NotifyCanExecuteChangedFor(nameof(SubmitCommand))]
+        [NotifyDataErrorInfo]
+        [CustomValidation(typeof(MakeReservationViewModel),
+            nameof(ValidateStartDateBeforEndDate),
+            ErrorMessage = "End date cannot be after start date.")]
         private DateTime _endDate = DateTime.Today.AddDays(1);
 
-        public DateTime EndDate
+        partial void OnEndDateChanged(DateTime oldValue, DateTime newValue)
         {
-            get
-            {
-                return _endDate;
-            }
-            set
-            {
-                _endDate = value;
-                OnPropertyChanged(nameof(EndDate));
-
-                ClearErrors(nameof(StartDate));
-                ClearErrors(nameof(EndDate));
-
-                if (EndDate < StartDate)
-                {
-                    AddError(nameof(EndDate), "End date must be after start date.");
-                }
-            }
+            ValidateProperty(StartDate, nameof(StartDate));
         }
 
-        public ICommand SubmitCommand { get; }
-        public ICommand CancelCommand { get; }
+        public static ValidationResult ValidateStartDateBeforEndDate(string name, ValidationContext context)
+        {
+            MakeReservationViewModel instance = (MakeReservationViewModel)context.ObjectInstance;
+
+            if (instance.StartDate < instance.EndDate)
+            {
+                return ValidationResult.Success;
+            }
+
+            return new("Start date is not before end date");
+        }
+
+        [RelayCommand(CanExecute = nameof(CanCreateReservation))]
+        private async Task Submit()
+        {
+            Reservation reservation = new Reservation(
+                new RoomID(FloorNumber, RoomNumber),
+                StartDate, EndDate, Username);
+
+            try
+            {
+                await _hotelStore.MakeReservation(reservation);
+                MessageBox.Show("Reservation successful.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                _navigationService.NavigateTo<ReservationsListingViewModel>();
+            }
+            catch (ReservationConflictException)
+            {
+                MessageBox.Show("This room is already taken for the selected dates.", "Error",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            } 
+        }
+
+        [RelayCommand]
+        private void Cancel()
+        {
+            _navigationService.NavigateTo<ReservationsListingViewModel>();
+        }
+
+        public bool CanCreateReservation => !String.IsNullOrEmpty(Username) && FloorNumber > 0 && RoomNumber > 0 && !HasErrors;
 
         public MakeReservationViewModel(HotelStore hotelStore, INavigationService navigationService)
         {
-            SubmitCommand = new MakeReservationCommand(this, hotelStore, navigationService);
-            CancelCommand = new NavigateCommand<ReservationsListingViewModel>(navigationService);
+            this._hotelStore = hotelStore;
+            this._navigationService = navigationService;
+            Messenger = WeakReferenceMessenger.Default;
         }
-
-        #region Errors
-
-        private Dictionary<string, List<string>> _propertyNameToErrorsDictionary = [];
-
-        public event EventHandler<DataErrorsChangedEventArgs>? ErrorsChanged;
-
-        public bool HasErrors => _propertyNameToErrorsDictionary.Any();
-
-        public IEnumerable GetErrors(string? propertyName)
-        {
-            return _propertyNameToErrorsDictionary.GetValueOrDefault(propertyName ?? "", new List<string>());
-        }
-
-        private void ClearErrors(string propertyName)
-        {
-            _propertyNameToErrorsDictionary.Remove(propertyName);
-            OnErrorsChanged(propertyName);
-        }
-
-        private void AddError(string propertyName, string error)
-        {
-            if(!_propertyNameToErrorsDictionary.ContainsKey(propertyName))
-            {
-                _propertyNameToErrorsDictionary.Add(propertyName, []);
-            }
-
-            _propertyNameToErrorsDictionary[propertyName].Add(error);
-
-            OnErrorsChanged(propertyName);
-        }
-
-        private void OnErrorsChanged(string propertyName)
-        {
-            ErrorsChanged?.Invoke(this, new DataErrorsChangedEventArgs(propertyName));
-        }
-
-        #endregion
     }
 }

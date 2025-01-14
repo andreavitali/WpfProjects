@@ -51,7 +51,7 @@ namespace MVVM
                     // Services
                     services.AddSingleton<IReservationService, ReservationService>();
 
-                    services.AddSingleton<Func<Type, ViewModelBase>>(services => viewModelType => (ViewModelBase)services.GetRequiredService(viewModelType));
+                    services.AddSingleton<Func<Type, IPageViewModel>>(services => viewModelType => (IPageViewModel)services.GetRequiredService(viewModelType));
                     services.AddSingleton<INavigationService, HotelReservations.MVVM.Services.NavigationService>();
 
                     //services.AddSingleton<NavigationService<MakeReservationViewModel>>();

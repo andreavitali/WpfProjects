@@ -1,4 +1,6 @@
-﻿using MVVM.Models;
+﻿using CommunityToolkit.Mvvm.Messaging;
+using HotelReservations.MVVM.Toolkit.Messages;
+using MVVM.Models;
 
 namespace HotelReservations.MVVM.Stores
 {
@@ -9,8 +11,6 @@ namespace HotelReservations.MVVM.Stores
         private Lazy<Task> _loadLazy;
 
         public IEnumerable<Reservation> Reservations => _reservations;
-
-        public event Action<Reservation>? ReservationMade;
 
         public HotelStore(Hotel hotel)
         {
@@ -41,7 +41,7 @@ namespace HotelReservations.MVVM.Stores
 
         private void OnReservationMade(Reservation reservation)
         {
-            ReservationMade?.Invoke(reservation);
+            WeakReferenceMessenger.Default.Send(new ReservationMadeMessage(reservation));
         }
 
         private async Task Initialize()
